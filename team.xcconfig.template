@@ -1,0 +1,10 @@
+// Personal build settings: signing team and bundle identifiers.
+// Not checked into git. Copy this file to team.xcconfig and fill in your values.
+//
+// Team ID: Xcode → Settings → Accounts → your team,
+// or https://developer.apple.com/account → Membership Details.
+//
+// Bundle identifier: any reverse-DNS name you own. The tests use "<identifier>.tests".
+
+DEVELOPMENT_TEAM = YOUR_TEAM_ID_HERE
+APP_BUNDLE_IDENTIFIER = com.example.homekitmcp

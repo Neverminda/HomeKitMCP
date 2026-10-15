@@ -19,18 +19,18 @@ Built as a Mac Catalyst app using the native HomeKit framework and the [official
    cd homekit_mcp/HomeKitMCP
    ```
 
-2. **Configure your development team:**
+2. **Configure your development team and bundle identifier:**
    ```bash
-   cp Local.xcconfig.template Local.xcconfig
+   cp team.xcconfig.template team.xcconfig
    ```
-   Open `Local.xcconfig` and replace `YOUR_TEAM_ID_HERE` with your [Apple Development Team ID](https://developer.apple.com/help/account/manage-your-team/locate-your-team-id/).
+   Open `team.xcconfig` and replace `YOUR_TEAM_ID_HERE` with your [Apple Development Team ID](https://developer.apple.com/help/account/manage-your-team/locate-your-team-id/), and `com.example.homekitmcp` with a bundle identifier you own (the tests use the same identifier plus `.tests`).
    This file is gitignored so your credentials stay local.
 
 3. **Open in Xcode:**
    ```bash
    open HomeKitMCP.xcodeproj
    ```
-   The project will pick up your team ID from `Local.xcconfig` automatically. The HomeKit entitlement is already configured.
+   The project will pick up your team ID and bundle identifier from `team.xcconfig` automatically. The HomeKit entitlement is already configured.
 
 4. **Set the destination** to **My Mac (Mac Catalyst)** in the Xcode toolbar
 
@@ -168,7 +168,7 @@ MCP Client (Claude, etc.)
 - The Mac must be signed into the same iCloud account as your Home setup
 
 **Build fails with signing errors:**
-- Make sure you've created `Local.xcconfig` from the template and set your Team ID
+- Make sure you've created `team.xcconfig` from the template and set your Team ID and bundle identifier
 - Alternatively, select a team manually in Xcode under Signing & Capabilities
 - A free Apple Developer account works, but the app must be re-signed every 7 days
 - A paid account ($99/year) provides longer-lived signing

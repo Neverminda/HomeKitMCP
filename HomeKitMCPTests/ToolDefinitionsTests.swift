@@ -5,15 +5,35 @@ import Testing
 struct ToolDefinitionsTests {
 
     @Test func allToolsCount() {
-        #expect(ToolDefinitions.all.count == 7)
+        #expect(ToolDefinitions.all.count == 15)
     }
 
     @Test func toolNamesAreCorrect() {
         let names = ToolDefinitions.all.map(\.name)
         #expect(names == [
             "list_homes", "list_rooms", "list_devices", "get_device_state", "control_device",
-            "batch_control_devices", "control_devices_by_filter",
+            "batch_control_devices", "batch_get_device_state", "control_devices_by_filter",
+            "list_scenes", "execute_scene",
+            "create_room", "rename_room", "delete_room", "move_device", "remove_device",
         ])
+    }
+
+    @Test func roomAndDeviceManagementToolsHaveRequiredFields() {
+        let expected: [(Tool, [String])] = [
+            (ToolDefinitions.createRoom, ["name"]),
+            (ToolDefinitions.renameRoom, ["name", "new_name"]),
+            (ToolDefinitions.deleteRoom, ["name", "confirm_name"]),
+            (ToolDefinitions.moveDevice, ["target_room"]),
+            (ToolDefinitions.removeDevice, ["confirm_name"]),
+        ]
+        for (tool, required) in expected {
+            if case .object(let schema) = tool.inputSchema {
+                #expect(schema["required"] == .array(required.map { .string($0) }),
+                        "Tool '\(tool.name)' has unexpected required fields")
+            } else {
+                Issue.record("Tool '\(tool.name)' inputSchema is not an object")
+            }
+        }
     }
 
     @Test func allToolsHaveDescriptions() {

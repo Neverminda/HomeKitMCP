@@ -57,12 +57,20 @@
 				StatusBarBridge.swift,
 			);
 			target = 1754FB212F370E9B00C3CD00 /* StatusBarPlugin */;
+		2A74D9B830817C0F003BB731 /* Exceptions for "HomeKitMCP" folder in "HomeKitMCP" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				todo.md,
+			);
+			target = 1754FA442F36F53A00C3CD00 /* HomeKitMCP */;
+		};
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		1754FA472F36F53A00C3CD00 /* HomeKitMCP */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+				2A74D9B830817C0F003BB731 /* Exceptions for "HomeKitMCP" folder in "HomeKitMCP" target */,
 			exceptions = (
 				1754FB342F37120000C3CD00 /* Exceptions for "HomeKitMCP" folder in "StatusBarPlugin" target */,
 			);
@@ -655,7 +663,7 @@
 			repositoryURL = "https://github.com/modelcontextprotocol/swift-sdk";
 			requirement = {
 				kind = upToNextMajorVersion;
-				minimumVersion = 0.10.2;
+				minimumVersion = 0.12.1;
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */

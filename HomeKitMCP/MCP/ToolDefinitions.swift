@@ -295,9 +295,153 @@ enum ToolDefinitions {
         ])
     )
 
+    static let createRoom = Tool(
+        name: "create_room",
+        description: "Create a new room in a HomeKit home. Fails if a room with that name already exists. Changes the real home immediately.",
+        inputSchema: .object([
+            "type": .string("object"),
+            "properties": .object([
+                "name": .object([
+                    "type": .string("string"),
+                    "description": .string("Name of the new room"),
+                ]),
+                "home": .object([
+                    "type": .string("string"),
+                    "description": .string("Home name. Omit to use the only or primary home."),
+                ]),
+            ]),
+            "required": .array([.string("name")]),
+        ])
+    )
+
+    static let renameRoom = Tool(
+        name: "rename_room",
+        description: "Rename an existing room in a HomeKit home. Changes the real home immediately.",
+        inputSchema: .object([
+            "type": .string("object"),
+            "properties": .object([
+                "name": .object([
+                    "type": .string("string"),
+                    "description": .string("Current room name (case-insensitive)"),
+                ]),
+                "new_name": .object([
+                    "type": .string("string"),
+                    "description": .string("New room name"),
+                ]),
+                "home": .object([
+                    "type": .string("string"),
+                    "description": .string("Home name to disambiguate rooms with the same name"),
+                ]),
+            ]),
+            "required": .array([.string("name"), .string("new_name")]),
+        ])
+    )
+
+    static let deleteRoom = Tool(
+        name: "delete_room",
+        description: """
+            Delete an empty room from a HomeKit home. Fails if the room still contains devices (move them out first with move_device). \
+            'confirm_name' must equal the room's exact name, otherwise nothing is deleted. \
+            Changes the real home immediately and may affect scenes and automations that use the room. \
+            Only call this after the user explicitly approved deleting this specific room.
+            """,
+        inputSchema: .object([
+            "type": .string("object"),
+            "properties": .object([
+                "name": .object([
+                    "type": .string("string"),
+                    "description": .string("Room name (case-insensitive)"),
+                ]),
+                "home": .object([
+                    "type": .string("string"),
+                    "description": .string("Home name to disambiguate rooms with the same name"),
+                ]),
+                "confirm_name": .object([
+                    "type": .string("string"),
+                    "description": .string("Exact name of the room to delete, as safety confirmation"),
+                ]),
+            ]),
+            "required": .array([.string("name"), .string("confirm_name")]),
+        ])
+    )
+
+    static let moveDevice = Tool(
+        name: "move_device",
+        description: """
+            Move a HomeKit device to another room in the same home. \
+            Specify the device by name or by unique ID (from list_devices). \
+            Use ID when multiple devices share the same name. \
+            Changes the real home immediately and may affect scenes and automations.
+            """,
+        inputSchema: .object([
+            "type": .string("object"),
+            "properties": .object([
+                "id": .object([
+                    "type": .string("string"),
+                    "description": .string("Device unique identifier (from list_devices uniqueIdentifier). If provided, name/home/room are ignored."),
+                ]),
+                "name": .object([
+                    "type": .string("string"),
+                    "description": .string("Device name (case-insensitive). Required if id is not provided."),
+                ]),
+                "home": .object([
+                    "type": .string("string"),
+                    "description": .string("Home name to disambiguate devices with the same name"),
+                ]),
+                "room": .object([
+                    "type": .string("string"),
+                    "description": .string("Current room of the device, to disambiguate devices with the same name"),
+                ]),
+                "target_room": .object([
+                    "type": .string("string"),
+                    "description": .string("Name of the room to move the device into"),
+                ]),
+            ]),
+            "required": .array([.string("target_room")]),
+        ])
+    )
+
+    static let removeDevice = Tool(
+        name: "remove_device",
+        description: """
+            Remove a device from HomeKit (unpair it from the home), e.g. to hand it over to another system such as Home Assistant. \
+            The device has to be paired again afterwards, and it is removed from all scenes and automations. \
+            Specify the device by unique ID (from list_devices) or name. \
+            'confirm_name' must equal the device's exact name, otherwise nothing is removed. \
+            Only call this after the user explicitly approved removing this specific device.
+            """,
+        inputSchema: .object([
+            "type": .string("object"),
+            "properties": .object([
+                "id": .object([
+                    "type": .string("string"),
+                    "description": .string("Device unique identifier (from list_devices uniqueIdentifier). If provided, name/home/room are ignored."),
+                ]),
+                "name": .object([
+                    "type": .string("string"),
+                    "description": .string("Device name (case-insensitive). Required if id is not provided."),
+                ]),
+                "home": .object([
+                    "type": .string("string"),
+                    "description": .string("Home name to disambiguate devices with the same name"),
+                ]),
+                "room": .object([
+                    "type": .string("string"),
+                    "description": .string("Room name to disambiguate devices with the same name"),
+                ]),
+                "confirm_name": .object([
+                    "type": .string("string"),
+                    "description": .string("Exact name of the device to remove, as safety confirmation"),
+                ]),
+            ]),
+            "required": .array([.string("confirm_name")]),
+        ])
+    )
+
     static let all: [Tool] = [
         listHomes, listRooms, listDevices, getDeviceState, controlDevice,
         batchControlDevices, batchGetDeviceState, controlDevicesByFilter,
         listScenes, executeScene,
+        createRoom, renameRoom, deleteRoom, moveDevice, removeDevice,
     ]
 }

@@ -16,12 +16,22 @@ final class MockHomeKitManager: HomeKitProviding {
     var stubbedControlByFilterResult: [[String: Any]] = []
     var stubbedScenes: [[String: Any]] = []
     var stubbedExecuteSceneResult: [String: Any] = [:]
+    var stubbedCreateRoomResult: [String: Any] = [:]
+    var stubbedRenameRoomResult: [String: Any] = [:]
+    var stubbedDeleteRoomResult: [String: Any] = [:]
+    var stubbedMoveDeviceResult: [String: Any] = [:]
+    var stubbedRemoveDeviceResult: [String: Any] = [:]
 
     // MARK: - Error stubs
 
     var getDeviceStateError: Error?
     var controlDeviceError: Error?
     var executeSceneError: Error?
+    var createRoomError: Error?
+    var renameRoomError: Error?
+    var deleteRoomError: Error?
+    var moveDeviceError: Error?
+    var removeDeviceError: Error?
 
     // MARK: - Call recording
 
@@ -36,6 +46,11 @@ final class MockHomeKitManager: HomeKitProviding {
     var controlDevicesByFilterCalledWith: (homeName: String?, roomName: String?, type: String?, action: String, value: Any?)?
     var listScenesCalledWith: String??
     var executeSceneCalledWith: (name: String?, homeName: String?, id: String?)?
+    var createRoomCalledWith: (name: String, homeName: String?)?
+    var renameRoomCalledWith: (name: String, newName: String, homeName: String?)?
+    var deleteRoomCalledWith: (name: String, homeName: String?, confirmName: String)?
+    var moveDeviceCalledWith: (id: String?, name: String?, homeName: String?, roomName: String?, targetRoom: String)?
+    var removeDeviceCalledWith: (id: String?, name: String?, homeName: String?, roomName: String?, confirmName: String)?
 
     // MARK: - Protocol conformance
 
@@ -107,5 +122,35 @@ final class MockHomeKitManager: HomeKitProviding {
         executeSceneCalledWith = (name, homeName, id)
         if let error = executeSceneError { throw error }
         return stubbedExecuteSceneResult
+    }
+
+    func createRoom(name: String, homeName: String?) async throws -> [String: Any] {
+        createRoomCalledWith = (name, homeName)
+        if let error = createRoomError { throw error }
+        return stubbedCreateRoomResult
+    }
+
+    func renameRoom(name: String, newName: String, homeName: String?) async throws -> [String: Any] {
+        renameRoomCalledWith = (name, newName, homeName)
+        if let error = renameRoomError { throw error }
+        return stubbedRenameRoomResult
+    }
+
+    func deleteRoom(name: String, homeName: String?, confirmName: String) async throws -> [String: Any] {
+        deleteRoomCalledWith = (name, homeName, confirmName)
+        if let error = deleteRoomError { throw error }
+        return stubbedDeleteRoomResult
+    }
+
+    func moveDevice(id: String?, name: String?, homeName: String?, roomName: String?, targetRoom: String) async throws -> [String: Any] {
+        moveDeviceCalledWith = (id, name, homeName, roomName, targetRoom)
+        if let error = moveDeviceError { throw error }
+        return stubbedMoveDeviceResult
+    }
+
+    func removeDevice(id: String?, name: String?, homeName: String?, roomName: String?, confirmName: String) async throws -> [String: Any] {
+        removeDeviceCalledWith = (id, name, homeName, roomName, confirmName)
+        if let error = removeDeviceError { throw error }
+        return stubbedRemoveDeviceResult
     }
 }

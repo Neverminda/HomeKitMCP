@@ -181,7 +181,7 @@ struct MCPServerManagerTests {
         let result = await manager.handleToolCall(params)
 
         #expect(result.isError == true)
-        if case .text(let text) = result.content.first {
+        if case .text(let text, _, _) = result.content.first {
             #expect(text.contains("Unknown tool"))
         } else {
             Issue.record("Expected text content in error result")
@@ -197,7 +197,7 @@ struct MCPServerManagerTests {
         let result = await manager.handleToolCall(params)
 
         #expect(result.isError == true)
-        if case .text(let text) = result.content.first {
+        if case .text(let text, _, _) = result.content.first {
             #expect(text.contains("'id' or 'name'"))
         }
     }
@@ -209,7 +209,7 @@ struct MCPServerManagerTests {
         let result = await manager.handleToolCall(params)
 
         #expect(result.isError == true)
-        if case .text(let text) = result.content.first {
+        if case .text(let text, _, _) = result.content.first {
             #expect(text.contains("'id' or 'name'"))
         }
     }
@@ -221,7 +221,7 @@ struct MCPServerManagerTests {
         let result = await manager.handleToolCall(params)
 
         #expect(result.isError == true)
-        if case .text(let text) = result.content.first {
+        if case .text(let text, _, _) = result.content.first {
             #expect(text.contains("Missing required parameter: action"))
         }
     }
@@ -236,7 +236,7 @@ struct MCPServerManagerTests {
         let result = await manager.handleToolCall(params)
 
         #expect(result.isError == true)
-        if case .text(let text) = result.content.first {
+        if case .text(let text, _, _) = result.content.first {
             #expect(text.contains("Device 'Ghost' not found"))
         }
     }
@@ -252,7 +252,7 @@ struct MCPServerManagerTests {
         let result = await manager.handleToolCall(params)
 
         #expect(result.isError == true)
-        if case .text(let text) = result.content.first {
+        if case .text(let text, _, _) = result.content.first {
             #expect(text.contains("not reachable"))
         }
     }
@@ -268,7 +268,7 @@ struct MCPServerManagerTests {
         let result = await manager.handleToolCall(params)
 
         #expect(result.isError == true)
-        if case .text(let text) = result.content.first {
+        if case .text(let text, _, _) = result.content.first {
             #expect(text.contains("Unknown action"))
         }
     }
@@ -284,7 +284,7 @@ struct MCPServerManagerTests {
         let result = await manager.handleToolCall(params)
 
         #expect(result.isError == true)
-        if case .text(let text) = result.content.first {
+        if case .text(let text, _, _) = result.content.first {
             #expect(text.contains("Invalid value"))
         }
     }
@@ -323,7 +323,7 @@ struct MCPServerManagerTests {
         let result = await manager.handleToolCall(params)
 
         #expect(result.isError == true)
-        if case .text(let text) = result.content.first {
+        if case .text(let text, _, _) = result.content.first {
             #expect(text.contains("commands"))
         }
     }
@@ -371,7 +371,7 @@ struct MCPServerManagerTests {
         let result = await manager.handleToolCall(params)
 
         #expect(result.isError == true)
-        if case .text(let text) = result.content.first {
+        if case .text(let text, _, _) = result.content.first {
             #expect(text.contains("devices"))
         }
     }
@@ -419,7 +419,7 @@ struct MCPServerManagerTests {
         let result = await manager.handleToolCall(params)
 
         #expect(result.isError == true)
-        if case .text(let text) = result.content.first {
+        if case .text(let text, _, _) = result.content.first {
             #expect(text.contains("action"))
         }
     }
@@ -434,7 +434,7 @@ struct MCPServerManagerTests {
         let result = await manager.handleToolCall(params)
 
         #expect(result.isError == true)
-        if case .text(let text) = result.content.first {
+        if case .text(let text, _, _) = result.content.first {
             #expect(text.contains("filter"))
         }
     }
@@ -525,7 +525,7 @@ struct MCPServerManagerTests {
         let result = await manager.handleToolCall(params)
 
         #expect(result.isError == true)
-        if case .text(let text) = result.content.first {
+        if case .text(let text, _, _) = result.content.first {
             #expect(text.contains("'id' or 'name'"))
         }
     }
@@ -541,7 +541,7 @@ struct MCPServerManagerTests {
         let result = await manager.handleToolCall(params)
 
         #expect(result.isError == true)
-        if case .text(let text) = result.content.first {
+        if case .text(let text, _, _) = result.content.first {
             #expect(text.contains("Scene 'Ghost Scene' not found"))
         }
     }
@@ -623,7 +623,7 @@ struct MCPServerManagerTests {
         let result = await manager.handleToolCall(params)
 
         #expect(result.isError != true)
-        if case .text(let text) = result.content.first {
+        if case .text(let text, _, _) = result.content.first {
             // Should be valid JSON
             let data = text.data(using: .utf8)!
             let parsed = try? JSONSerialization.jsonObject(with: data)
@@ -632,5 +632,179 @@ struct MCPServerManagerTests {
         } else {
             Issue.record("Expected text content in result")
         }
+    }
+
+    // MARK: - Room and Device Management
+
+    @Test func createRoomRoutesToHomeKitManager() async {
+        let (manager, mock) = makeSUT()
+        mock.stubbedCreateRoomResult = ["success": true, "room": "EG Küche", "home": "My Home"]
+
+        let params = CallTool.Parameters(
+            name: "create_room",
+            arguments: ["name": .string("EG Küche"), "home": .string("My Home")]
+        )
+        let result = await manager.handleToolCall(params)
+
+        #expect(mock.createRoomCalledWith?.name == "EG Küche")
+        #expect(mock.createRoomCalledWith?.homeName == "My Home")
+        #expect(result.isError != true)
+    }
+
+    @Test func createRoomRequiresName() async {
+        let (manager, mock) = makeSUT()
+
+        let result = await manager.handleToolCall(CallTool.Parameters(name: "create_room", arguments: [:]))
+
+        #expect(mock.createRoomCalledWith == nil)
+        #expect(result.isError == true)
+    }
+
+    @Test func renameRoomRoutesToHomeKitManager() async {
+        let (manager, mock) = makeSUT()
+
+        let params = CallTool.Parameters(
+            name: "rename_room",
+            arguments: ["name": .string("Küche"), "new_name": .string("EG Küche")]
+        )
+        let result = await manager.handleToolCall(params)
+
+        #expect(mock.renameRoomCalledWith?.name == "Küche")
+        #expect(mock.renameRoomCalledWith?.newName == "EG Küche")
+        #expect(mock.renameRoomCalledWith?.homeName == nil)
+        #expect(result.isError != true)
+    }
+
+    @Test func renameRoomRequiresNewName() async {
+        let (manager, mock) = makeSUT()
+
+        let params = CallTool.Parameters(name: "rename_room", arguments: ["name": .string("Küche")])
+        let result = await manager.handleToolCall(params)
+
+        #expect(mock.renameRoomCalledWith == nil)
+        #expect(result.isError == true)
+    }
+
+    @Test func moveDeviceRoutesToHomeKitManager() async {
+        let (manager, mock) = makeSUT()
+
+        let params = CallTool.Parameters(
+            name: "move_device",
+            arguments: ["name": .string("Lampe"), "room": .string("Flur"), "target_room": .string("EG Flur")]
+        )
+        let result = await manager.handleToolCall(params)
+
+        #expect(mock.moveDeviceCalledWith?.name == "Lampe")
+        #expect(mock.moveDeviceCalledWith?.roomName == "Flur")
+        #expect(mock.moveDeviceCalledWith?.targetRoom == "EG Flur")
+        #expect(result.isError != true)
+    }
+
+    @Test func moveDeviceRequiresIdOrNameAndTargetRoom() async {
+        let (manager, mock) = makeSUT()
+
+        let noDevice = await manager.handleToolCall(
+            CallTool.Parameters(name: "move_device", arguments: ["target_room": .string("EG Flur")])
+        )
+        let noTarget = await manager.handleToolCall(
+            CallTool.Parameters(name: "move_device", arguments: ["name": .string("Lampe")])
+        )
+
+        #expect(mock.moveDeviceCalledWith == nil)
+        #expect(noDevice.isError == true)
+        #expect(noTarget.isError == true)
+    }
+
+    @Test func moveDeviceErrorIsReported() async {
+        let (manager, mock) = makeSUT()
+        mock.moveDeviceError = HomeKitError.roomNotFound("Nowhere")
+
+        let params = CallTool.Parameters(
+            name: "move_device",
+            arguments: ["name": .string("Lampe"), "target_room": .string("Nowhere")]
+        )
+        let result = await manager.handleToolCall(params)
+
+        #expect(result.isError == true)
+    }
+
+    @Test func removeDeviceRoutesToHomeKitManager() async {
+        let (manager, mock) = makeSUT()
+
+        let params = CallTool.Parameters(
+            name: "remove_device",
+            arguments: ["id": .string("ABC"), "confirm_name": .string("Lampe")]
+        )
+        let result = await manager.handleToolCall(params)
+
+        #expect(mock.removeDeviceCalledWith?.id == "ABC")
+        #expect(mock.removeDeviceCalledWith?.confirmName == "Lampe")
+        #expect(result.isError != true)
+    }
+
+    @Test func removeDeviceRequiresConfirmNameAndDevice() async {
+        let (manager, mock) = makeSUT()
+
+        let noConfirm = await manager.handleToolCall(
+            CallTool.Parameters(name: "remove_device", arguments: ["name": .string("Lampe")])
+        )
+        let noDevice = await manager.handleToolCall(
+            CallTool.Parameters(name: "remove_device", arguments: ["confirm_name": .string("Lampe")])
+        )
+
+        #expect(mock.removeDeviceCalledWith == nil)
+        #expect(noConfirm.isError == true)
+        #expect(noDevice.isError == true)
+    }
+
+    @Test func removeDeviceConfirmationMismatchIsReported() async {
+        let (manager, mock) = makeSUT()
+        mock.removeDeviceError = HomeKitError.confirmationMismatch(expected: "Lampe", given: "Falsch")
+
+        let params = CallTool.Parameters(
+            name: "remove_device",
+            arguments: ["name": .string("Lampe"), "confirm_name": .string("Falsch")]
+        )
+        let result = await manager.handleToolCall(params)
+
+        #expect(result.isError == true)
+    }
+
+    @Test func deleteRoomRoutesToHomeKitManager() async {
+        let (manager, mock) = makeSUT()
+
+        let params = CallTool.Parameters(
+            name: "delete_room",
+            arguments: ["name": .string("Testraum"), "confirm_name": .string("Testraum")]
+        )
+        let result = await manager.handleToolCall(params)
+
+        #expect(mock.deleteRoomCalledWith?.name == "Testraum")
+        #expect(mock.deleteRoomCalledWith?.confirmName == "Testraum")
+        #expect(result.isError != true)
+    }
+
+    @Test func deleteRoomRequiresConfirmName() async {
+        let (manager, mock) = makeSUT()
+
+        let result = await manager.handleToolCall(
+            CallTool.Parameters(name: "delete_room", arguments: ["name": .string("Testraum")])
+        )
+
+        #expect(mock.deleteRoomCalledWith == nil)
+        #expect(result.isError == true)
+    }
+
+    @Test func deleteRoomNotEmptyIsReported() async {
+        let (manager, mock) = makeSUT()
+        mock.deleteRoomError = HomeKitError.roomNotEmpty("Testraum", deviceCount: 2)
+
+        let params = CallTool.Parameters(
+            name: "delete_room",
+            arguments: ["name": .string("Testraum"), "confirm_name": .string("Testraum")]
+        )
+        let result = await manager.handleToolCall(params)
+
+        #expect(result.isError == true)
     }
 }

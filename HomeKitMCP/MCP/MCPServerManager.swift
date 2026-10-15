@@ -108,10 +108,14 @@ final class MCPServerManager: ObservableObject {
 
         await server.withMethodHandler(CallTool.self) { [weak self] params in
             guard let self else {
-                return CallTool.Result(content: [.text("Server shutting down")], isError: true)
+                return CallTool.Result(content: [Self.textContent("Server shutting down")], isError: true)
             }
             return await self.handleToolCall(params)
         }
+    }
+
+    private nonisolated static func textContent(_ text: String) -> Tool.Content {
+        .text(text: text, annotations: nil, _meta: nil)
     }
 
     func handleToolCall(_ params: CallTool.Parameters) async -> CallTool.Result {
@@ -142,7 +146,7 @@ final class MCPServerManager: ObservableObject {
                 let id = args["id"]?.stringValue
                 let name = args["name"]?.stringValue
                 guard id != nil || name != nil else {
-                    return CallTool.Result(content: [.text("Either 'id' or 'name' is required")], isError: true)
+                    return CallTool.Result(content: [Self.textContent("Either 'id' or 'name' is required")], isError: true)
                 }
                 let home = args["home"]?.stringValue
                 let room = args["room"]?.stringValue
@@ -152,10 +156,10 @@ final class MCPServerManager: ObservableObject {
                 let id = args["id"]?.stringValue
                 let name = args["name"]?.stringValue
                 guard id != nil || name != nil else {
-                    return CallTool.Result(content: [.text("Either 'id' or 'name' is required")], isError: true)
+                    return CallTool.Result(content: [Self.textContent("Either 'id' or 'name' is required")], isError: true)
                 }
                 guard let action = args["action"]?.stringValue else {
-                    return CallTool.Result(content: [.text("Missing required parameter: action")], isError: true)
+                    return CallTool.Result(content: [Self.textContent("Missing required parameter: action")], isError: true)
                 }
                 let home = args["home"]?.stringValue
                 let room = args["room"]?.stringValue
@@ -167,27 +171,27 @@ final class MCPServerManager: ObservableObject {
 
             case "batch_control_devices":
                 guard let commandValues = args["commands"]?.arrayValue, !commandValues.isEmpty else {
-                    return CallTool.Result(content: [.text("Missing or empty required parameter: commands")], isError: true)
+                    return CallTool.Result(content: [Self.textContent("Missing or empty required parameter: commands")], isError: true)
                 }
                 let commands = commandValues.map { convertValue($0) as? [String: Any] ?? [:] }
                 result = await homeKitManager.batchControlDevices(commands: commands)
 
             case "batch_get_device_state":
                 guard let deviceValues = args["devices"]?.arrayValue, !deviceValues.isEmpty else {
-                    return CallTool.Result(content: [.text("Missing or empty required parameter: devices")], isError: true)
+                    return CallTool.Result(content: [Self.textContent("Missing or empty required parameter: devices")], isError: true)
                 }
                 let devices = deviceValues.map { convertValue($0) as? [String: Any] ?? [:] }
                 result = await homeKitManager.batchGetDeviceState(devices: devices)
 
             case "control_devices_by_filter":
                 guard let action = args["action"]?.stringValue else {
-                    return CallTool.Result(content: [.text("Missing required parameter: action")], isError: true)
+                    return CallTool.Result(content: [Self.textContent("Missing required parameter: action")], isError: true)
                 }
                 let home = args["home"]?.stringValue
                 let room = args["room"]?.stringValue
                 let type = args["type"]?.stringValue
                 guard home != nil || room != nil || type != nil else {
-                    return CallTool.Result(content: [.text("At least one filter (home, room, or type) is required")], isError: true)
+                    return CallTool.Result(content: [Self.textContent("At least one filter (home, room, or type) is required")], isError: true)
                 }
                 let value = args["value"].map { convertValue($0) }
                 result = await homeKitManager.controlDevicesByFilter(
@@ -204,25 +208,87 @@ final class MCPServerManager: ObservableObject {
                 let id = args["id"]?.stringValue
                 let name = args["name"]?.stringValue
                 guard id != nil || name != nil else {
-                    return CallTool.Result(content: [.text("Either 'id' or 'name' is required")], isError: true)
+                    return CallTool.Result(content: [Self.textContent("Either 'id' or 'name' is required")], isError: true)
                 }
                 let home = args["home"]?.stringValue
                 result = try await homeKitManager.executeScene(name: name, homeName: home, id: id)
 
+            case "create_room":
+                guard let name = args["name"]?.stringValue else {
+                    return CallTool.Result(content: [Self.textContent("Missing required parameter: name")], isError: true)
+                }
+                let home = args["home"]?.stringValue
+                result = try await homeKitManager.createRoom(name: name, homeName: home)
+                Log.info("Got [create_room] \(name) in home \(String(describing: home)) result: \(result)")
+
+            case "rename_room":
+                guard let name = args["name"]?.stringValue else {
+                    return CallTool.Result(content: [Self.textContent("Missing required parameter: name")], isError: true)
+                }
+                guard let newName = args["new_name"]?.stringValue else {
+                    return CallTool.Result(content: [Self.textContent("Missing required parameter: new_name")], isError: true)
+                }
+                let home = args["home"]?.stringValue
+                result = try await homeKitManager.renameRoom(name: name, newName: newName, homeName: home)
+                Log.info("Got [rename_room] \(name) -> \(newName) result: \(result)")
+
+            case "delete_room":
+                guard let name = args["name"]?.stringValue else {
+                    return CallTool.Result(content: [Self.textContent("Missing required parameter: name")], isError: true)
+                }
+                guard let confirmName = args["confirm_name"]?.stringValue else {
+                    return CallTool.Result(content: [Self.textContent("Missing required parameter: confirm_name")], isError: true)
+                }
+                let home = args["home"]?.stringValue
+                result = try await homeKitManager.deleteRoom(name: name, homeName: home, confirmName: confirmName)
+                Log.info("Got [delete_room] \(name) result: \(result)")
+
+            case "move_device":
+                let id = args["id"]?.stringValue
+                let name = args["name"]?.stringValue
+                guard id != nil || name != nil else {
+                    return CallTool.Result(content: [Self.textContent("Either 'id' or 'name' is required")], isError: true)
+                }
+                guard let targetRoom = args["target_room"]?.stringValue else {
+                    return CallTool.Result(content: [Self.textContent("Missing required parameter: target_room")], isError: true)
+                }
+                let home = args["home"]?.stringValue
+                let room = args["room"]?.stringValue
+                result = try await homeKitManager.moveDevice(
+                    id: id, name: name, homeName: home, roomName: room, targetRoom: targetRoom
+                )
+                Log.info("Got [move_device] \(id ?? name ?? "unknown") -> \(targetRoom) result: \(result)")
+
+            case "remove_device":
+                let id = args["id"]?.stringValue
+                let name = args["name"]?.stringValue
+                guard id != nil || name != nil else {
+                    return CallTool.Result(content: [Self.textContent("Either 'id' or 'name' is required")], isError: true)
+                }
+                guard let confirmName = args["confirm_name"]?.stringValue else {
+                    return CallTool.Result(content: [Self.textContent("Missing required parameter: confirm_name")], isError: true)
+                }
+                let home = args["home"]?.stringValue
+                let room = args["room"]?.stringValue
+                result = try await homeKitManager.removeDevice(
+                    id: id, name: name, homeName: home, roomName: room, confirmName: confirmName
+                )
+                Log.info("Got [remove_device] \(id ?? name ?? "unknown") result: \(result)")
+
             default:
                 return CallTool.Result(
-                    content: [.text("Unknown tool: \(params.name)")],
+                    content: [Self.textContent("Unknown tool: \(params.name)")],
                     isError: true
                 )
             }
 
             let json = try JSONSerialization.data(withJSONObject: result, options: [.prettyPrinted, .sortedKeys])
             let text = String(data: json, encoding: .utf8) ?? "{}"
-            return CallTool.Result(content: [.text(text)])
+            return CallTool.Result(content: [Self.textContent(text)])
         } catch {
             Log.error("Tool '\(params.name)' failed: \(error)")
             return CallTool.Result(
-                content: [.text("Error: \(error.localizedDescription)")],
+                content: [Self.textContent("Error: \(error.localizedDescription)")],
                 isError: true
             )
         }

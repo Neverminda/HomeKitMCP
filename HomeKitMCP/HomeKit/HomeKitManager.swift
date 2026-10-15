@@ -33,7 +33,7 @@ final class HomeKitManager: NSObject {
         return manager.homes.map { home in
             [
                 "name": home.name,
-                "isPrimary": home == manager.primaryHome,
+                "isPrimary": home.isPrimary,
                 "roomCount": home.rooms.count,
                 "accessoryCount": home.accessories.count,
             ] as [String: Any]
@@ -359,6 +359,170 @@ final class HomeKitManager: NSObject {
         ] as [String: Any]
     }
 
+    // MARK: - Room Management
+
+    func createRoom(name: String, homeName: String?) async throws -> [String: Any] {
+        let home = try resolveHome(name: homeName)
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            throw HomeKitError.invalidValue("room name must not be empty")
+        }
+        guard findRoom(name: trimmed, in: home) == nil else {
+            throw HomeKitError.roomAlreadyExists(trimmed)
+        }
+
+        let room: HMRoom = try await withCheckedThrowingContinuation { continuation in
+            home.addRoom(withName: trimmed) { room, error in
+                if let room {
+                    continuation.resume(returning: room)
+                } else {
+                    continuation.resume(throwing: error ?? HomeKitError.invalidValue("HomeKit did not create the room"))
+                }
+            }
+        }
+        return [
+            "success": true,
+            "room": room.name,
+            "home": home.name,
+        ] as [String: Any]
+    }
+
+    func renameRoom(name: String, newName: String, homeName: String?) async throws -> [String: Any] {
+        let trimmed = newName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            throw HomeKitError.invalidValue("new room name must not be empty")
+        }
+        let home = try resolveHome(name: homeName, containingRoom: name)
+        guard let room = findRoom(name: name, in: home) else {
+            throw HomeKitError.roomNotFound(name)
+        }
+        if let existing = findRoom(name: trimmed, in: home), existing.uniqueIdentifier != room.uniqueIdentifier {
+            throw HomeKitError.roomAlreadyExists(trimmed)
+        }
+
+        let oldName = room.name
+        try await room.updateName(trimmed)
+        return [
+            "success": true,
+            "oldName": oldName,
+            "room": room.name,
+            "home": home.name,
+        ] as [String: Any]
+    }
+
+    /// Deletes an empty room. `confirmName` has to match the room's actual name.
+    func deleteRoom(name: String, homeName: String?, confirmName: String) async throws -> [String: Any] {
+        let home = try resolveHome(name: homeName, containingRoom: name)
+        guard let room = findRoom(name: name, in: home) else {
+            throw HomeKitError.roomNotFound(name)
+        }
+        guard room.name.localizedCaseInsensitiveCompare(confirmName) == .orderedSame else {
+            throw HomeKitError.confirmationMismatch(expected: room.name, given: confirmName)
+        }
+        guard room.accessories.isEmpty else {
+            throw HomeKitError.roomNotEmpty(room.name, deviceCount: room.accessories.count)
+        }
+
+        let removedName = room.name
+        try await home.removeRoom(room)
+        return [
+            "success": true,
+            "room": removedName,
+            "home": home.name,
+        ] as [String: Any]
+    }
+
+    // MARK: - Device Management
+
+    func moveDevice(
+        id: String?,
+        name: String?,
+        homeName: String?,
+        roomName: String?,
+        targetRoom: String
+    ) async throws -> [String: Any] {
+        guard let accessory = resolveAccessory(id: id, name: name, homeName: homeName, roomName: roomName) else {
+            throw HomeKitError.deviceNotFound(id ?? name ?? "unknown")
+        }
+        guard let home = homeManager?.homes.first(where: { home in
+            home.accessories.contains(where: { $0.uniqueIdentifier == accessory.uniqueIdentifier })
+        }) else {
+            throw HomeKitError.deviceNotFound(id ?? name ?? "unknown")
+        }
+        guard let room = findRoom(name: targetRoom, in: home) else {
+            throw HomeKitError.roomNotFound(targetRoom)
+        }
+
+        let previousRoom = accessory.room?.name ?? "Default Room"
+        try await home.assignAccessory(accessory, to: room)
+        return [
+            "success": true,
+            "device": accessory.name,
+            "from": previousRoom,
+            "to": room.name,
+            "home": home.name,
+        ] as [String: Any]
+    }
+
+    /// Removes an accessory from its home (it must be paired again afterwards).
+    /// `confirmName` has to match the accessory's actual name, so a wrong or guessed target is never removed.
+    func removeDevice(
+        id: String?,
+        name: String?,
+        homeName: String?,
+        roomName: String?,
+        confirmName: String
+    ) async throws -> [String: Any] {
+        guard let accessory = resolveAccessory(id: id, name: name, homeName: homeName, roomName: roomName) else {
+            throw HomeKitError.deviceNotFound(id ?? name ?? "unknown")
+        }
+        guard accessory.name.localizedCaseInsensitiveCompare(confirmName) == .orderedSame else {
+            throw HomeKitError.confirmationMismatch(expected: accessory.name, given: confirmName)
+        }
+        guard let home = homeManager?.homes.first(where: { home in
+            home.accessories.contains(where: { $0.uniqueIdentifier == accessory.uniqueIdentifier })
+        }) else {
+            throw HomeKitError.deviceNotFound(id ?? name ?? "unknown")
+        }
+
+        let removedName = accessory.name
+        let removedRoom = accessory.room?.name ?? "Default Room"
+        let removedId = accessory.uniqueIdentifier.uuidString
+        try await home.removeAccessory(accessory)
+        return [
+            "success": true,
+            "device": removedName,
+            "room": removedRoom,
+            "home": home.name,
+            "uniqueIdentifier": removedId,
+        ] as [String: Any]
+    }
+
+    // MARK: - Private: Room Helpers
+
+    private func findRoom(name: String, in home: HMHome) -> HMRoom? {
+        home.rooms.first { $0.name.localizedCaseInsensitiveCompare(name) == .orderedSame }
+    }
+
+    /// Resolves the target home: by name if given, else the room's home, else the only/primary home.
+    private func resolveHome(name: String?, containingRoom roomName: String? = nil) throws -> HMHome {
+        guard let manager = homeManager else { throw HomeKitError.homeNotFound(name ?? "unknown") }
+        if let name {
+            guard let home = matchingHomes(name: name).first else { throw HomeKitError.homeNotFound(name) }
+            return home
+        }
+        if let roomName {
+            let candidates = manager.homes.filter { findRoom(name: roomName, in: $0) != nil }
+            if candidates.count == 1, let home = candidates.first { return home }
+            if candidates.count > 1 {
+                throw HomeKitError.invalidValue("room '\(roomName)' exists in several homes, specify 'home'")
+            }
+        }
+        if manager.homes.count == 1, let home = manager.homes.first { return home }
+        if let primary = manager.homes.first(where: \.isPrimary) { return primary }
+        throw HomeKitError.homeNotFound(name ?? "unknown")
+    }
+
     // MARK: - Private: Scene Helpers
 
     private func resolveActionSet(name: String?, homeName: String?, id: String?) -> HMActionSet? {
@@ -641,6 +805,11 @@ enum HomeKitError: LocalizedError {
     case invalidValue(String)
     case unknownAction(String)
     case sceneNotFound(String)
+    case homeNotFound(String)
+    case roomNotFound(String)
+    case roomAlreadyExists(String)
+    case confirmationMismatch(expected: String, given: String)
+    case roomNotEmpty(String, deviceCount: Int)
 
     var errorDescription: String? {
         switch self {
@@ -651,6 +820,13 @@ enum HomeKitError: LocalizedError {
         case .invalidValue(let msg): "Invalid value: \(msg)"
         case .unknownAction(let action): "Unknown action: '\(action)'"
         case .sceneNotFound(let name): "Scene '\(name)' not found"
+        case .homeNotFound(let name): "Home '\(name)' not found"
+        case .roomNotFound(let name): "Room '\(name)' not found"
+        case .roomAlreadyExists(let name): "Room '\(name)' already exists"
+        case .roomNotEmpty(let name, let count):
+            "Room '\(name)' still contains \(count) device(s). Move them out first."
+        case .confirmationMismatch(let expected, let given):
+            "Confirmation '\(given)' does not match the actual name '\(expected)'. Nothing was removed."
         }
     }
 }

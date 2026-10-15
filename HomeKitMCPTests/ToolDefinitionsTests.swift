@@ -5,7 +5,7 @@ import Testing
 struct ToolDefinitionsTests {
 
     @Test func allToolsCount() {
-        #expect(ToolDefinitions.all.count == 15)
+        #expect(ToolDefinitions.all.count == 16 + ManagementToolDefinitions.all.count)
     }
 
     @Test func toolNamesAreCorrect() {
@@ -14,8 +14,8 @@ struct ToolDefinitionsTests {
             "list_homes", "list_rooms", "list_devices", "get_device_state", "control_device",
             "batch_control_devices", "batch_get_device_state", "control_devices_by_filter",
             "list_scenes", "execute_scene",
-            "create_room", "rename_room", "delete_room", "move_device", "remove_device",
-        ])
+            "create_room", "rename_room", "delete_room", "rename_device", "move_device", "remove_device",
+        ] + ManagementToolDefinitions.all.map(\.name))
     }
 
     @Test func roomAndDeviceManagementToolsHaveRequiredFields() {
@@ -23,6 +23,7 @@ struct ToolDefinitionsTests {
             (ToolDefinitions.createRoom, ["name"]),
             (ToolDefinitions.renameRoom, ["name", "new_name"]),
             (ToolDefinitions.deleteRoom, ["name", "confirm_name"]),
+            (ToolDefinitions.renameDevice, ["new_name"]),
             (ToolDefinitions.moveDevice, ["target_room"]),
             (ToolDefinitions.removeDevice, ["confirm_name"]),
         ]

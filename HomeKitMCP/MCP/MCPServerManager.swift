@@ -243,6 +243,22 @@ final class MCPServerManager: ObservableObject {
                 result = try await homeKitManager.deleteRoom(name: name, homeName: home, confirmName: confirmName)
                 Log.info("Got [delete_room] \(name) result: \(result)")
 
+            case "rename_device":
+                let id = args["id"]?.stringValue
+                let name = args["name"]?.stringValue
+                guard id != nil || name != nil else {
+                    return CallTool.Result(content: [Self.textContent("Either 'id' or 'name' is required")], isError: true)
+                }
+                guard let newName = args["new_name"]?.stringValue else {
+                    return CallTool.Result(content: [Self.textContent("Missing required parameter: new_name")], isError: true)
+                }
+                let home = args["home"]?.stringValue
+                let room = args["room"]?.stringValue
+                result = try await homeKitManager.renameDevice(
+                    id: id, name: name, homeName: home, roomName: room, newName: newName
+                )
+                Log.info("Got [rename_device] \(id ?? name ?? "unknown") -> \(newName) result: \(result)")
+
             case "move_device":
                 let id = args["id"]?.stringValue
                 let name = args["name"]?.stringValue
@@ -274,6 +290,22 @@ final class MCPServerManager: ObservableObject {
                     id: id, name: name, homeName: home, roomName: room, confirmName: confirmName
                 )
                 Log.info("Got [remove_device] \(id ?? name ?? "unknown") result: \(result)")
+
+            case let name where ManagementToolDefinitions.names.contains(name):
+                let missing = ManagementToolDefinitions.requiredParameters(of: name).filter { key in
+                    guard let value = args[key] else { return true }
+                    if case .null = value { return true }
+                    return false
+                }
+                guard missing.isEmpty else {
+                    return CallTool.Result(
+                        content: [Self.textContent("Missing required parameter: \(missing.joined(separator: ", "))")],
+                        isError: true
+                    )
+                }
+                let arguments = args.mapValues { convertValue($0) }
+                result = try await homeKitManager.perform(name, arguments: arguments)
+                Log.info("Got [\(name)] result: \(result)")
 
             default:
                 return CallTool.Result(

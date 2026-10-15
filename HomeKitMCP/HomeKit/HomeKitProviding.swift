@@ -16,6 +16,9 @@ protocol HomeKitProviding {
     func createRoom(name: String, homeName: String?) async throws -> [String: Any]
     func renameRoom(name: String, newName: String, homeName: String?) async throws -> [String: Any]
     func deleteRoom(name: String, homeName: String?, confirmName: String) async throws -> [String: Any]
+    func renameDevice(id: String?, name: String?, homeName: String?, roomName: String?, newName: String) async throws -> [String: Any]
     func moveDevice(id: String?, name: String?, homeName: String?, roomName: String?, targetRoom: String) async throws -> [String: Any]
     func removeDevice(id: String?, name: String?, homeName: String?, roomName: String?, confirmName: String) async throws -> [String: Any]
+    /// Zones, accessory details, scenes, automations, people and events (see `ManagementToolDefinitions`).
+    func perform(_ operation: String, arguments: [String: Any]) async throws -> Any
 }

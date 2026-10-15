@@ -3,9 +3,12 @@ import HomeKit
 
 @MainActor
 final class HomeKitManager: NSObject {
-    private var homeManager: HMHomeManager?
+    private(set) var homeManager: HMHomeManager?
     private var readyContinuation: CheckedContinuation<Void, Never>?
     private var isReady = false
+    let eventLog = EventLog()
+    /// Characteristics this server enabled notifications for. HomeKit enables others on its own.
+    var watchedCharacteristics: Set<UUID> = []
 
     override init() {
         super.init()
@@ -464,6 +467,33 @@ final class HomeKitManager: NSObject {
         ] as [String: Any]
     }
 
+    func renameDevice(
+        id: String?,
+        name: String?,
+        homeName: String?,
+        roomName: String?,
+        newName: String
+    ) async throws -> [String: Any] {
+        let trimmed = newName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            throw HomeKitError.invalidValue("new device name must not be empty")
+        }
+        guard let accessory = resolveAccessory(id: id, name: name, homeName: homeName, roomName: roomName) else {
+            throw HomeKitError.deviceNotFound(id ?? name ?? "unknown")
+        }
+
+        let oldName = accessory.name
+        try await accessory.updateName(trimmed)
+        return [
+            "success": true,
+            "oldName": oldName,
+            "device": accessory.name,
+            "room": accessory.room?.name ?? "Default Room",
+            "home": homeNameForAccessory(accessory),
+            "uniqueIdentifier": accessory.uniqueIdentifier.uuidString,
+        ] as [String: Any]
+    }
+
     /// Removes an accessory from its home (it must be paired again afterwards).
     /// `confirmName` has to match the accessory's actual name, so a wrong or guessed target is never removed.
     func removeDevice(
@@ -500,12 +530,12 @@ final class HomeKitManager: NSObject {
 
     // MARK: - Private: Room Helpers
 
-    private func findRoom(name: String, in home: HMHome) -> HMRoom? {
+    func findRoom(name: String, in home: HMHome) -> HMRoom? {
         home.rooms.first { $0.name.localizedCaseInsensitiveCompare(name) == .orderedSame }
     }
 
     /// Resolves the target home: by name if given, else the room's home, else the only/primary home.
-    private func resolveHome(name: String?, containingRoom roomName: String? = nil) throws -> HMHome {
+    func resolveHome(name: String?, containingRoom roomName: String? = nil, containingZone zoneName: String? = nil) throws -> HMHome {
         guard let manager = homeManager else { throw HomeKitError.homeNotFound(name ?? "unknown") }
         if let name {
             guard let home = matchingHomes(name: name).first else { throw HomeKitError.homeNotFound(name) }
@@ -518,6 +548,13 @@ final class HomeKitManager: NSObject {
                 throw HomeKitError.invalidValue("room '\(roomName)' exists in several homes, specify 'home'")
             }
         }
+        if let zoneName {
+            let candidates = manager.homes.filter { findZone(name: zoneName, in: $0) != nil }
+            if candidates.count == 1, let home = candidates.first { return home }
+            if candidates.count > 1 {
+                throw HomeKitError.invalidValue("zone '\(zoneName)' exists in several homes, specify 'home'")
+            }
+        }
         if manager.homes.count == 1, let home = manager.homes.first { return home }
         if let primary = manager.homes.first(where: \.isPrimary) { return primary }
         throw HomeKitError.homeNotFound(name ?? "unknown")
@@ -525,7 +562,7 @@ final class HomeKitManager: NSObject {
 
     // MARK: - Private: Scene Helpers
 
-    private func resolveActionSet(name: String?, homeName: String?, id: String?) -> HMActionSet? {
+    func resolveActionSet(name: String?, homeName: String?, id: String?) -> HMActionSet? {
         if let id, let uuid = UUID(uuidString: id) {
             return findActionSetById(uuid)
         }
@@ -535,7 +572,7 @@ final class HomeKitManager: NSObject {
         return nil
     }
 
-    private func findActionSetById(_ uuid: UUID) -> HMActionSet? {
+    func findActionSetById(_ uuid: UUID) -> HMActionSet? {
         guard let manager = homeManager else { return nil }
         for home in manager.homes {
             if let actionSet = home.actionSets.first(where: { $0.uniqueIdentifier == uuid }) {
@@ -545,7 +582,7 @@ final class HomeKitManager: NSObject {
         return nil
     }
 
-    private func findActionSet(name: String, homeName: String?) -> HMActionSet? {
+    func findActionSet(name: String, homeName: String?) -> HMActionSet? {
         let homes = matchingHomes(name: homeName)
         for home in homes {
             if let actionSet = home.actionSets.first(where: {
@@ -557,14 +594,14 @@ final class HomeKitManager: NSObject {
         return nil
     }
 
-    private func homeForActionSet(_ actionSet: HMActionSet) -> HMHome? {
+    func homeForActionSet(_ actionSet: HMActionSet) -> HMHome? {
         guard let manager = homeManager else { return nil }
         return manager.homes.first { home in
             home.actionSets.contains(where: { $0.uniqueIdentifier == actionSet.uniqueIdentifier })
         }
     }
 
-    private func actionSetType(for actionSet: HMActionSet) -> String? {
+    func actionSetType(for actionSet: HMActionSet) -> String? {
         switch actionSet.actionSetType {
         case HMActionSetTypeWakeUp: return "wake_up"
         case HMActionSetTypeSleep: return "sleep"
@@ -577,7 +614,7 @@ final class HomeKitManager: NSObject {
 
     // MARK: - Private: Lookup Helpers
 
-    private func matchingHomes(name: String?) -> [HMHome] {
+    func matchingHomes(name: String?) -> [HMHome] {
         guard let manager = homeManager else { return [] }
         if let name = name {
             return manager.homes.filter { $0.name.localizedCaseInsensitiveCompare(name) == .orderedSame }
@@ -585,7 +622,7 @@ final class HomeKitManager: NSObject {
         return manager.homes
     }
 
-    private func matchingAccessories(homeName: String?, roomName: String?) -> [HMAccessory] {
+    func matchingAccessories(homeName: String?, roomName: String?) -> [HMAccessory] {
         let homes = matchingHomes(name: homeName)
         var accessories: [HMAccessory] = []
         for home in homes {
@@ -603,12 +640,12 @@ final class HomeKitManager: NSObject {
         return accessories
     }
 
-    private func findAccessory(name: String, homeName: String?, roomName: String?) -> HMAccessory? {
+    func findAccessory(name: String, homeName: String?, roomName: String?) -> HMAccessory? {
         let candidates = matchingAccessories(homeName: homeName, roomName: roomName)
         return candidates.first { $0.name.localizedCaseInsensitiveCompare(name) == .orderedSame }
     }
 
-    private func findAccessoryById(_ id: String) -> HMAccessory? {
+    func findAccessoryById(_ id: String) -> HMAccessory? {
         guard let manager = homeManager, let uuid = UUID(uuidString: id) else { return nil }
         for home in manager.homes {
             if let accessory = home.accessories.first(where: { $0.uniqueIdentifier == uuid }) {
@@ -618,7 +655,7 @@ final class HomeKitManager: NSObject {
         return nil
     }
 
-    private func resolveAccessory(id: String?, name: String?, homeName: String?, roomName: String?) -> HMAccessory? {
+    func resolveAccessory(id: String?, name: String?, homeName: String?, roomName: String?) -> HMAccessory? {
         if let id {
             return findAccessoryById(id)
         }
@@ -628,7 +665,7 @@ final class HomeKitManager: NSObject {
         return nil
     }
 
-    private func homeNameForAccessory(_ accessory: HMAccessory) -> String {
+    func homeNameForAccessory(_ accessory: HMAccessory) -> String {
         guard let manager = homeManager else { return "Unknown" }
         for home in manager.homes {
             if home.accessories.contains(where: { $0.uniqueIdentifier == accessory.uniqueIdentifier }) {
@@ -640,7 +677,7 @@ final class HomeKitManager: NSObject {
 
     // MARK: - Private: Characteristic Helpers
 
-    private func findCharacteristic(accessory: HMAccessory, type: String) -> HMCharacteristic? {
+    func findCharacteristic(accessory: HMAccessory, type: String) -> HMCharacteristic? {
         for service in accessory.services {
             for characteristic in service.characteristics where characteristic.characteristicType == type {
                 return characteristic
@@ -649,7 +686,7 @@ final class HomeKitManager: NSObject {
         return nil
     }
 
-    private func setCharacteristic(accessory: HMAccessory, type: String, value: Any) async throws {
+    func setCharacteristic(accessory: HMAccessory, type: String, value: Any) async throws {
         guard let characteristic = findCharacteristic(accessory: accessory, type: type) else {
             throw HomeKitError.characteristicNotFound(type)
         }
@@ -676,7 +713,7 @@ final class HomeKitManager: NSObject {
 
     // MARK: - Private: Type Detection
 
-    private func deviceType(for accessory: HMAccessory) -> String {
+    func deviceType(for accessory: HMAccessory) -> String {
         for service in accessory.services {
             switch service.serviceType {
             case HMServiceTypeLightbulb: return "light"
@@ -702,7 +739,7 @@ final class HomeKitManager: NSObject {
 
     // MARK: - Private: Value Formatting
 
-    private func characteristicKey(for characteristic: HMCharacteristic) -> String? {
+    func characteristicKey(for characteristic: HMCharacteristic) -> String? {
         switch characteristic.characteristicType {
         case HMCharacteristicTypePowerState: return "power"
         case HMCharacteristicTypeBrightness: return "brightness"
@@ -726,7 +763,7 @@ final class HomeKitManager: NSObject {
         }
     }
 
-    private func formatValue(_ value: Any, for characteristic: HMCharacteristic) -> Any {
+    func formatValue(_ value: Any, for characteristic: HMCharacteristic) -> Any {
         switch characteristic.characteristicType {
         case HMCharacteristicTypeCurrentLockMechanismState:
             guard let raw = value as? Int else { return value }
@@ -763,14 +800,14 @@ final class HomeKitManager: NSObject {
 
     // MARK: - Private: Value Conversion
 
-    private func intValue(_ value: Any?) -> Int? {
+    func intValue(_ value: Any?) -> Int? {
         if let i = value as? Int { return i }
         if let d = value as? Double { return Int(d) }
         if let s = value as? String, let i = Int(s) { return i }
         return nil
     }
 
-    private func doubleValue(_ value: Any?) -> Double? {
+    func doubleValue(_ value: Any?) -> Double? {
         if let d = value as? Double { return d }
         if let i = value as? Int { return Double(i) }
         if let s = value as? String, let d = Double(s) { return d }
@@ -788,12 +825,27 @@ extension HomeKitManager: HMHomeManagerDelegate {
     nonisolated func homeManagerDidUpdateHomes(_ manager: HMHomeManager) {
         Task { @MainActor in
             Log.info("HomeKitManager: homes updated (\(manager.homes.count) home(s))")
+            attachDelegates()
+            eventLog.add(kind: "homes_updated", home: nil, subject: nil, detail: ["homeCount": manager.homes.count])
             isReady = true
             readyContinuation?.resume()
             readyContinuation = nil
         }
     }
 }
+
+extension HomeKitManager {
+    nonisolated func homeManager(_ manager: HMHomeManager, didAdd home: HMHome) {
+        emit("home_added", home: home.name, subject: home.name)
+        Task { @MainActor in attachDelegates() }
+    }
+
+    nonisolated func homeManager(_ manager: HMHomeManager, didRemove home: HMHome) {
+        emit("home_removed", home: home.name, subject: home.name)
+    }
+}
+
+extension HomeKitManager: HMAccessoryDelegate {}
 
 // MARK: - Errors
 
@@ -810,6 +862,14 @@ enum HomeKitError: LocalizedError {
     case roomAlreadyExists(String)
     case confirmationMismatch(expected: String, given: String)
     case roomNotEmpty(String, deviceCount: Int)
+    case zoneNotFound(String)
+    case zoneAlreadyExists(String)
+    case serviceNotFound(String)
+    case characteristicIdNotFound(String)
+    case sceneAlreadyExists(String)
+    case automationNotFound(String)
+    case automationAlreadyExists(String)
+    case unknownOperation(String)
 
     var errorDescription: String? {
         switch self {
@@ -823,6 +883,14 @@ enum HomeKitError: LocalizedError {
         case .homeNotFound(let name): "Home '\(name)' not found"
         case .roomNotFound(let name): "Room '\(name)' not found"
         case .roomAlreadyExists(let name): "Room '\(name)' already exists"
+        case .zoneNotFound(let name): "Zone '\(name)' not found"
+        case .zoneAlreadyExists(let name): "Zone '\(name)' already exists"
+        case .serviceNotFound(let id): "Service '\(id)' not found"
+        case .characteristicIdNotFound(let id): "Characteristic '\(id)' not found"
+        case .sceneAlreadyExists(let name): "Scene '\(name)' already exists"
+        case .automationNotFound(let name): "Automation '\(name)' not found"
+        case .automationAlreadyExists(let name): "Automation '\(name)' already exists"
+        case .unknownOperation(let name): "Unknown operation '\(name)'"
         case .roomNotEmpty(let name, let count):
             "Room '\(name)' still contains \(count) device(s). Move them out first."
         case .confirmationMismatch(let expected, let given):

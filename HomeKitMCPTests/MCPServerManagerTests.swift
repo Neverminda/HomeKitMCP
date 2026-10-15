@@ -807,4 +807,33 @@ struct MCPServerManagerTests {
 
         #expect(result.isError == true)
     }
+
+    @Test func renameDeviceRoutesToHomeKitManager() async {
+        let (manager, mock) = makeSUT()
+
+        let params = CallTool.Parameters(
+            name: "rename_device",
+            arguments: ["id": .string("ABC"), "new_name": .string("EG Flur Lampe")]
+        )
+        let result = await manager.handleToolCall(params)
+
+        #expect(mock.renameDeviceCalledWith?.id == "ABC")
+        #expect(mock.renameDeviceCalledWith?.newName == "EG Flur Lampe")
+        #expect(result.isError != true)
+    }
+
+    @Test func renameDeviceRequiresDeviceAndNewName() async {
+        let (manager, mock) = makeSUT()
+
+        let noDevice = await manager.handleToolCall(
+            CallTool.Parameters(name: "rename_device", arguments: ["new_name": .string("X")])
+        )
+        let noNewName = await manager.handleToolCall(
+            CallTool.Parameters(name: "rename_device", arguments: ["name": .string("Lampe")])
+        )
+
+        #expect(mock.renameDeviceCalledWith == nil)
+        #expect(noDevice.isError == true)
+        #expect(noNewName.isError == true)
+    }
 }

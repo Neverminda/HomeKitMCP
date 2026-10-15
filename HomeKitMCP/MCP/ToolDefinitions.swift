@@ -401,6 +401,42 @@ enum ToolDefinitions {
         ])
     )
 
+    static let renameDevice = Tool(
+        name: "rename_device",
+        description: """
+            Rename a HomeKit device. \
+            Specify the device by unique ID (from list_devices) or name. \
+            Use ID when multiple devices share the same name. \
+            Changes the real home immediately; scenes and automations keep working because they reference the device, not its name.
+            """,
+        inputSchema: .object([
+            "type": .string("object"),
+            "properties": .object([
+                "id": .object([
+                    "type": .string("string"),
+                    "description": .string("Device unique identifier (from list_devices uniqueIdentifier). If provided, name/home/room are ignored."),
+                ]),
+                "name": .object([
+                    "type": .string("string"),
+                    "description": .string("Current device name (case-insensitive). Required if id is not provided."),
+                ]),
+                "home": .object([
+                    "type": .string("string"),
+                    "description": .string("Home name to disambiguate devices with the same name"),
+                ]),
+                "room": .object([
+                    "type": .string("string"),
+                    "description": .string("Room name to disambiguate devices with the same name"),
+                ]),
+                "new_name": .object([
+                    "type": .string("string"),
+                    "description": .string("New device name"),
+                ]),
+            ]),
+            "required": .array([.string("new_name")]),
+        ])
+    )
+
     static let removeDevice = Tool(
         name: "remove_device",
         description: """
@@ -442,6 +478,6 @@ enum ToolDefinitions {
         listHomes, listRooms, listDevices, getDeviceState, controlDevice,
         batchControlDevices, batchGetDeviceState, controlDevicesByFilter,
         listScenes, executeScene,
-        createRoom, renameRoom, deleteRoom, moveDevice, removeDevice,
-    ]
+        createRoom, renameRoom, deleteRoom, renameDevice, moveDevice, removeDevice,
+    ] + ManagementToolDefinitions.all
 }

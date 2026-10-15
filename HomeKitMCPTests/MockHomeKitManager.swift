@@ -19,6 +19,8 @@ final class MockHomeKitManager: HomeKitProviding {
     var stubbedCreateRoomResult: [String: Any] = [:]
     var stubbedRenameRoomResult: [String: Any] = [:]
     var stubbedDeleteRoomResult: [String: Any] = [:]
+    var stubbedRenameDeviceResult: [String: Any] = [:]
+    var stubbedPerformResult: Any = [String: Any]()
     var stubbedMoveDeviceResult: [String: Any] = [:]
     var stubbedRemoveDeviceResult: [String: Any] = [:]
 
@@ -30,6 +32,8 @@ final class MockHomeKitManager: HomeKitProviding {
     var createRoomError: Error?
     var renameRoomError: Error?
     var deleteRoomError: Error?
+    var renameDeviceError: Error?
+    var performError: Error?
     var moveDeviceError: Error?
     var removeDeviceError: Error?
 
@@ -49,6 +53,8 @@ final class MockHomeKitManager: HomeKitProviding {
     var createRoomCalledWith: (name: String, homeName: String?)?
     var renameRoomCalledWith: (name: String, newName: String, homeName: String?)?
     var deleteRoomCalledWith: (name: String, homeName: String?, confirmName: String)?
+    var renameDeviceCalledWith: (id: String?, name: String?, homeName: String?, roomName: String?, newName: String)?
+    var performCalledWith: (operation: String, arguments: [String: Any])?
     var moveDeviceCalledWith: (id: String?, name: String?, homeName: String?, roomName: String?, targetRoom: String)?
     var removeDeviceCalledWith: (id: String?, name: String?, homeName: String?, roomName: String?, confirmName: String)?
 
@@ -140,6 +146,18 @@ final class MockHomeKitManager: HomeKitProviding {
         deleteRoomCalledWith = (name, homeName, confirmName)
         if let error = deleteRoomError { throw error }
         return stubbedDeleteRoomResult
+    }
+
+    func renameDevice(id: String?, name: String?, homeName: String?, roomName: String?, newName: String) async throws -> [String: Any] {
+        renameDeviceCalledWith = (id, name, homeName, roomName, newName)
+        if let error = renameDeviceError { throw error }
+        return stubbedRenameDeviceResult
+    }
+
+    func perform(_ operation: String, arguments: [String: Any]) async throws -> Any {
+        performCalledWith = (operation, arguments)
+        if let error = performError { throw error }
+        return stubbedPerformResult
     }
 
     func moveDevice(id: String?, name: String?, homeName: String?, roomName: String?, targetRoom: String) async throws -> [String: Any] {

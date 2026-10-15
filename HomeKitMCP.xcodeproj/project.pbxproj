@@ -9,7 +9,7 @@
 /* Begin PBXBuildFile section */
 		1754FA7E2F36FA5000C3CD00 /* MCP in Frameworks */ = {isa = PBXBuildFile; productRef = 1754FA7D2F36FA5000C3CD00 /* MCP */; };
 		1754FA7F2F36FA5100C3CD00 /* MCP in Frameworks */ = {isa = PBXBuildFile; productRef = 1754FA802F36FA5100C3CD00 /* MCP */; };
-		1754FB312F37120000C3CD00 /* StatusBarPlugin.bundle in Embed PlugIns */ = {isa = PBXBuildFile; fileRef = 1754FB222F370E9B00C3CD00 /* StatusBarPlugin.bundle */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		1754FB312F37120000C3CD00 /* StatusBarPlugin.bundle in Embed PlugIns */ = {isa = PBXBuildFile; fileRef = 1754FB222F370E9B00C3CD00 /* StatusBarPlugin.bundle */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -47,7 +47,6 @@
 		1754FA452F36F53A00C3CD00 /* HomeKitMCP.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = HomeKitMCP.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		1754FA522F36F53B00C3CD00 /* HomeKitMCPTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = HomeKitMCPTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		1754FB222F370E9B00C3CD00 /* StatusBarPlugin.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = StatusBarPlugin.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
-		17F0A0012F3A000000C3CD00 /* Local.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Local.xcconfig; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -57,6 +56,7 @@
 				StatusBarBridge.swift,
 			);
 			target = 1754FB212F370E9B00C3CD00 /* StatusBarPlugin */;
+		};
 		2A74D9B830817C0F003BB731 /* Exceptions for "HomeKitMCP" folder in "HomeKitMCP" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
@@ -64,14 +64,13 @@
 			);
 			target = 1754FA442F36F53A00C3CD00 /* HomeKitMCP */;
 		};
-		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		1754FA472F36F53A00C3CD00 /* HomeKitMCP */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-				2A74D9B830817C0F003BB731 /* Exceptions for "HomeKitMCP" folder in "HomeKitMCP" target */,
 			exceptions = (
+				2A74D9B830817C0F003BB731 /* Exceptions for "HomeKitMCP" folder in "HomeKitMCP" target */,
 				1754FB342F37120000C3CD00 /* Exceptions for "HomeKitMCP" folder in "StatusBarPlugin" target */,
 			);
 			path = HomeKitMCP;
@@ -119,7 +118,6 @@
 		1754FA3C2F36F53A00C3CD00 = {
 			isa = PBXGroup;
 			children = (
-				17F0A0012F3A000000C3CD00 /* Local.xcconfig */,
 				1754FA472F36F53A00C3CD00 /* HomeKitMCP */,
 				1754FB302F37120000C3CD00 /* StatusBarPlugin */,
 				1754FA552F36F53B00C3CD00 /* HomeKitMCPTests */,
@@ -219,7 +217,7 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 2620;
-				LastUpgradeCheck = 2620;
+				LastUpgradeCheck = 2720;
 				TargetAttributes = {
 					1754FA442F36F53A00C3CD00 = {
 						CreatedOnToolsVersion = 26.2;
@@ -321,7 +319,6 @@
 /* Begin XCBuildConfiguration section */
 		1754FA642F36F53B00C3CD00 /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 17F0A0012F3A000000C3CD00 /* Local.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
@@ -355,7 +352,6 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = dwarf;
-
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -379,6 +375,7 @@
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
@@ -386,7 +383,6 @@
 		};
 		1754FA652F36F53B00C3CD00 /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 17F0A0012F3A000000C3CD00 /* Local.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
@@ -420,7 +416,6 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -437,6 +432,7 @@
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				VALIDATE_PRODUCT = YES;
 			};
@@ -451,7 +447,7 @@
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-
+				DEVELOPMENT_TEAM = 6X58B6A2GR;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
@@ -462,12 +458,15 @@
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = grahamaloo.HomeKitMCP;
+				"PRODUCT_BUNDLE_IDENTIFIER[sdk=iphoneos*]" = "thomas-schmitt.homekitMCP";
+				"PRODUCT_BUNDLE_IDENTIFIER[sdk=macosx*]" = "thomas-schmitt.homekitMCP";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -492,7 +491,7 @@
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-
+				DEVELOPMENT_TEAM = 6X58B6A2GR;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
@@ -503,12 +502,15 @@
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = grahamaloo.HomeKitMCP;
+				"PRODUCT_BUNDLE_IDENTIFIER[sdk=iphoneos*]" = "thomas-schmitt.homekitMCP";
+				"PRODUCT_BUNDLE_IDENTIFIER[sdk=macosx*]" = "thomas-schmitt.homekitMCP";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -530,11 +532,14 @@
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-
+				DEVELOPMENT_TEAM = 6X58B6A2GR;
 				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
+				MACOSX_DEPLOYMENT_TARGET = 27.0;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = grahamaloo.HomeKitMCPTests;
+				"PRODUCT_BUNDLE_IDENTIFIER[sdk=iphoneos*]" = "thomas-schmitt.homekitMCP.tests";
+				"PRODUCT_BUNDLE_IDENTIFIER[sdk=macosx*]" = "thomas-schmitt.homekitMCP.tests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -552,11 +557,14 @@
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-
+				DEVELOPMENT_TEAM = 6X58B6A2GR;
 				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
+				MACOSX_DEPLOYMENT_TARGET = 27.0;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = grahamaloo.HomeKitMCPTests;
+				"PRODUCT_BUNDLE_IDENTIFIER[sdk=iphoneos*]" = "thomas-schmitt.homekitMCP.tests";
+				"PRODUCT_BUNDLE_IDENTIFIER[sdk=macosx*]" = "thomas-schmitt.homekitMCP.tests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -574,7 +582,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
-
+				DEAD_CODE_STRIPPING = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				INFOPLIST_KEY_NSPrincipalClass = StatusBarController;
@@ -598,7 +606,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
-
+				DEAD_CODE_STRIPPING = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				INFOPLIST_KEY_NSPrincipalClass = StatusBarController;

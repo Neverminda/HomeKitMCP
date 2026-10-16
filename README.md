@@ -181,3 +181,16 @@ MCP Client (Claude, etc.)
 ## License
 
 MIT
+
+## Betrieb unter launchd (Unix-Socket)
+
+Statt pro MCP-Client eine eigene App zu starten, kann die App dauerhaft unter launchd laufen und auf einem Unix-Socket lauschen:
+
+```
+HomeKitMCP.app --headless --socket ~/.mcp/homekit/homekit.sock
+```
+
+- Der Socket hat die Rechte `0600` (nur der eigene Benutzer). Jede Verbindung bekommt einen eigenen MCP-Server mit dem Stdio-Protokoll, die HomeKit-Anbindung wird geteilt. Ohne `--socket` läuft die App wie bisher über stdio.
+- `launchd/de.example.homekit-mcp.plist.template`: Vorlage für einen LaunchAgent mit `KeepAlive` (`__HOME__` durch den Home-Pfad ersetzen, nach `~/Library/LaunchAgents/` kopieren, `launchctl bootstrap gui/$(id -u) <Datei>`). Gestartet wird über `open -W -a`, damit macOS die HomeKit-Berechtigung der App selbst prüft.
+- Anbindung in der MCP-Konfiguration: `"command": "/usr/bin/nc", "args": ["-U", "/Users/<name>/.mcp/homekit/homekit.sock"]`.
+- Wird die App neu gestartet, bricht die Verbindung laufender Clients ab; der Client muss den Server neu verbinden.

@@ -191,6 +191,6 @@ HomeKitMCP.app --headless --socket ~/.mcp/homekit/homekit.sock
 ```
 
 - Der Socket hat die Rechte `0600` (nur der eigene Benutzer). Jede Verbindung bekommt einen eigenen MCP-Server mit dem Stdio-Protokoll, die HomeKit-Anbindung wird geteilt. Ohne `--socket` läuft die App wie bisher über stdio.
-- `launchd/de.example.homekit-mcp.plist.template`: Vorlage für einen LaunchAgent mit `KeepAlive` (`__HOME__` durch den Home-Pfad ersetzen, nach `~/Library/LaunchAgents/` kopieren, `launchctl bootstrap gui/$(id -u) <Datei>`). Gestartet wird über `open -W -a`, damit macOS die HomeKit-Berechtigung der App selbst prüft.
+- `launchd/de.example.homekit-mcp.plist.template` (LaunchAgent mit `KeepAlive`) und `launchd/homekit-mcp-service.template` (Starter-Skript): Vorlagen. Das Skript startet die App über `open -W -g -j -a`, damit macOS die HomeKit-Berechtigung der App selbst prüft und kein Fenster erscheint, und beendet beim Start und beim Stoppen die App-Instanz, die den Socket hält (sonst bleiben beim Neustart verwaiste Instanzen zurück, weil `open` nicht der Elternprozess der App ist). Einrichten: Skript nach `~/.mcp/homekit/bin/homekit-mcp-service` kopieren (ausführbar), Plist (`__HOME__` ersetzen) nach `~/Library/LaunchAgents/`, `launchctl bootstrap gui/$(id -u) <Datei>`.
 - Anbindung in der MCP-Konfiguration: `"command": "/usr/bin/nc", "args": ["-U", "/Users/<name>/.mcp/homekit/homekit.sock"]`.
 - Wird die App neu gestartet, bricht die Verbindung laufender Clients ab; der Client muss den Server neu verbinden.

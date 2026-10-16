@@ -1,0 +1,21 @@
+#!/bin/bash
+# LaunchAgent-Starter für HomeKitMCP (Unix-Socket-Betrieb).
+# Startet die App über LaunchServices (HomeKit-Berechtigung), räumt aber beim Start und beim Beenden
+# die App-Instanz auf, die den Socket hält, damit keine verwaisten Instanzen übrig bleiben.
+APP="$HOME/.mcp/homekit/bin/HomeKitMCP.app"
+SOCK="$HOME/.mcp/homekit/homekit.sock"
+LOG="$HOME/Library/Logs/homekit-mcp.log"
+
+kill_socket_holders() {
+  for a in $(pgrep -f "$APP/Contents/MacOS/HomeKitMCP"); do
+    lsof -p "$a" 2>/dev/null | grep -q "homekit.sock" && kill "$a" 2>/dev/null
+  done
+}
+cleanup() { kill_socket_holders; rm -f "$SOCK"; exit 0; }
+trap cleanup TERM INT HUP
+
+kill_socket_holders; sleep 1; rm -f "$SOCK"
+open -W -n -g -j -a "$APP" --stdout "$HOME/Library/Logs/homekit-mcp.out" --stderr "$LOG" --args --headless --socket "$SOCK" &
+wait $!
+# App beendet sich (Absturz): Fehlercode weitergeben, launchd startet neu
+exit 1

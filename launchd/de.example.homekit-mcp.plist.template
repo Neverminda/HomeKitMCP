@@ -5,17 +5,7 @@
   <key>Label</key><string>de.example.homekit-mcp</string>
   <key>ProgramArguments</key>
   <array>
-    <string>/usr/bin/open</string>
-    <string>-W</string>
-    <string>-n</string>
-    <string>-a</string>
-    <string>__HOME__/.mcp/homekit/bin/HomeKitMCP.app</string>
-    <string>--stdout</string><string>__HOME__/Library/Logs/homekit-mcp.out</string>
-    <string>--stderr</string><string>__HOME__/Library/Logs/homekit-mcp.log</string>
-    <string>--args</string>
-    <string>--headless</string>
-    <string>--socket</string>
-    <string>__HOME__/.mcp/homekit/homekit.sock</string>
+    <string>__HOME__/.mcp/homekit/bin/homekit-mcp-service</string>
   </array>
   <key>RunAtLoad</key><true/>
   <key>KeepAlive</key><true/>

@@ -4,6 +4,8 @@ A macOS app that bridges Apple HomeKit with the [Model Context Protocol](https:/
 
 Built as a Mac Catalyst app using the native HomeKit framework and the [official Swift MCP SDK](https://github.com/modelcontextprotocol/swift-sdk). Runs headless with an optional menu bar status item.
 
+> **Fork notice:** This is a fork of [grahamaloo/HomeKitMCP](https://github.com/grahamaloo/HomeKitMCP). Branch `feature/launchd-socket` adds write tools (rooms, devices, scenes, automations, zones), a Unix-socket mode for running under launchd, and a truly invisible headless mode (no Dock icon, no visible window).
+
 ## Prerequisites
 
 - **macOS 15.0+**
@@ -15,8 +17,8 @@ Built as a Mac Catalyst app using the native HomeKit framework and the [official
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/grahamaloo/homekit_mcp.git
-   cd homekit_mcp/HomeKitMCP
+   git clone -b feature/launchd-socket https://github.com/Neverminda/HomeKitMCP.git
+   cd HomeKitMCP
    ```
 
 2. **Configure your development team and bundle identifier:**
@@ -79,24 +81,24 @@ Add to your Claude Desktop MCP config (`~/Library/Application Support/Claude/cla
 
 Replace `/path/to/` with the actual path to your built `.app` bundle.
 
-The `--headless` flag runs the server without the menu bar status item, which is recommended when launched by an MCP client.
+The `--headless` flag runs the server without the menu bar status item and without a visible window, which is recommended when launched by an MCP client. As a Mac Catalyst app it still needs one window scene, so in headless mode the window is reduced to 1×1 pixel, made transparent, and parked at the top center edge of the main screen; the app runs as an accessory (no Dock icon).
 
 ## Capabilities
 
 ### MCP Tools
 
-| Tool | Description |
-|------|-------------|
-| `list_homes` | List all HomeKit homes configured on this Mac |
-| `list_rooms` | List rooms in a home with device counts |
-| `list_devices` | List devices, filtered by home, room, or type |
-| `get_device_state` | Get current state of a device (power, brightness, temperature, etc.) |
-| `control_device` | Control a single device (on/off, brightness, color, lock, thermostat, etc.) |
-| `batch_control_devices` | Control multiple devices in one call |
-| `batch_get_device_state` | Query multiple device states in one call |
-| `control_devices_by_filter` | Apply an action to all devices matching a filter (e.g. all lights in a room) |
-| `list_scenes` | List HomeKit scenes/action sets |
-| `execute_scene` | Trigger a scene by name or ID |
+| Area | Tools |
+|------|-------|
+| Homes and rooms | `list_homes`, `rename_home`, `list_rooms`, `create_room`, `rename_room`, `delete_room` |
+| Zones | `list_zones`, `create_zone`, `rename_zone`, `delete_zone`, `add_room_to_zone`, `remove_room_from_zone` |
+| Devices (read) | `list_devices`, `get_device_info`, `get_device_state`, `batch_get_device_state`, `list_characteristics`, `read_characteristic`, `list_users` |
+| Devices (control) | `control_device`, `batch_control_devices`, `control_devices_by_filter`, `write_characteristic`, `identify_device` |
+| Devices (manage) | `rename_device`, `batch_rename_devices`, `move_device`, `batch_move_devices`, `rename_service`, `remove_device` |
+| Scenes | `list_scenes`, `get_scene`, `execute_scene`, `create_scene`, `rename_scene`, `delete_scene`, `add_scene_actions`, `remove_scene_actions` |
+| Automations | `list_automations`, `get_automation`, `create_automation`, `rename_automation`, `enable_automation`, `update_automation_scenes`, `delete_automation` |
+| Events | `watch_devices`, `unwatch_devices`, `list_watched`, `get_events`, `clear_events` |
+
+> **Caution:** The write tools act on your real home immediately (locks, garage doors, heating). `remove_device` and the delete tools are destructive; require explicit confirmation in your MCP client.
 
 ### Supported Device Types
 
@@ -182,15 +184,16 @@ MCP Client (Claude, etc.)
 
 MIT
 
-## Betrieb unter launchd (Unix-Socket)
+## Running under launchd (Unix socket)
 
-Statt pro MCP-Client eine eigene App zu starten, kann die App dauerhaft unter launchd laufen und auf einem Unix-Socket lauschen:
+Instead of starting one app per MCP client, the app can run permanently under launchd and listen on a Unix socket:
 
 ```
 HomeKitMCP.app --headless --socket ~/.mcp/homekit/homekit.sock
 ```
 
-- Der Socket hat die Rechte `0600` (nur der eigene Benutzer). Jede Verbindung bekommt einen eigenen MCP-Server mit dem Stdio-Protokoll, die HomeKit-Anbindung wird geteilt. Ohne `--socket` läuft die App wie bisher über stdio.
-- `launchd/de.example.homekit-mcp.plist.template` (LaunchAgent mit `KeepAlive`) und `launchd/homekit-mcp-service.template` (Starter-Skript): Vorlagen. Das Skript startet die App über `open -W -g -j -a`, damit macOS die HomeKit-Berechtigung der App selbst prüft und kein Fenster erscheint, und beendet beim Start und beim Stoppen die App-Instanz, die den Socket hält (sonst bleiben beim Neustart verwaiste Instanzen zurück, weil `open` nicht der Elternprozess der App ist). Einrichten: Skript nach `~/.mcp/homekit/bin/homekit-mcp-service` kopieren (ausführbar), Plist (`__HOME__` ersetzen) nach `~/Library/LaunchAgents/`, `launchctl bootstrap gui/$(id -u) <Datei>`.
-- Anbindung in der MCP-Konfiguration: `"command": "/usr/bin/nc", "args": ["-U", "/Users/<name>/.mcp/homekit/homekit.sock"]`.
-- Wird die App neu gestartet, bricht die Verbindung laufender Clients ab; der Client muss den Server neu verbinden.
+- The socket has mode `0600` (current user only). Every connection gets its own MCP server speaking the stdio protocol; the HomeKit connection is shared. Without `--socket` the app works over stdio as before.
+- `launchd/de.example.homekit-mcp.plist.template` (LaunchAgent with `KeepAlive`) and `launchd/homekit-mcp-service.template` (starter script) are templates. The script starts the app via `open -W -g -j -a`, so macOS checks the HomeKit permission for the app itself and no window appears. On start and stop it kills the app instance holding the socket (otherwise orphaned instances remain after a restart, because `open` is not the app's parent process).
+- Setup: copy the script to `~/.mcp/homekit/bin/homekit-mcp-service` (executable), copy the plist (replace `__HOME__`) to `~/Library/LaunchAgents/`, then run `launchctl bootstrap gui/$(id -u) <file>`.
+- MCP client configuration: `"command": "/usr/bin/nc", "args": ["-U", "/Users/<name>/.mcp/homekit/homekit.sock"]`.
+- If the app is restarted, running client connections break; the client must reconnect the server.

@@ -2,6 +2,7 @@ import Combine
 import Dispatch
 import Foundation
 import MCP
+import System
 
 @MainActor
 final class MCPServerManager: ObservableObject {
@@ -9,6 +10,12 @@ final class MCPServerManager: ObservableObject {
     private var serverTask: Task<Void, Never>?
     private let homeKitManager: HomeKitProviding
     private var signalSources: [DispatchSourceSignal] = []
+    /// Pfad des Unix-Sockets, wenn die App mit `--socket <Pfad>` gestartet wurde (Betrieb unter launchd).
+    private let socketPath: String? = {
+        let args = CommandLine.arguments
+        guard let i = args.firstIndex(of: "--socket"), i + 1 < args.count else { return nil }
+        return args[i + 1]
+    }()
 
     init(homeKitManager: HomeKitProviding? = nil, startServer: Bool = true) {
         self.homeKitManager = homeKitManager ?? HomeKitManager()
@@ -25,6 +32,11 @@ final class MCPServerManager: ObservableObject {
 
         // Initialize HomeKit first
         await homeKitManager.start()
+
+        if let socketPath {
+            await runSocketServer(path: socketPath)
+            return
+        }
 
         // Create MCP server
         let server = Server(
@@ -87,6 +99,7 @@ final class MCPServerManager: ObservableObject {
 
     func shutdown() async {
         Log.info("Graceful shutdown started…")
+        if let socketPath { unlink(socketPath) }
 
         if let server {
             await server.stop()
@@ -98,6 +111,80 @@ final class MCPServerManager: ObservableObject {
 
         Log.info("Graceful shutdown complete, exiting process")
         exit(0)
+    }
+
+    // MARK: - Unix-Socket-Betrieb (launchd)
+
+    /// Lauscht auf einem Unix-Socket (Rechte 0600, nur der eigene Benutzer). Jede Verbindung bekommt einen
+    /// eigenen MCP-Server mit dem gleichen Stdio-Protokoll; die HomeKit-Anbindung wird gemeinsam genutzt.
+    private func runSocketServer(path: String) async {
+        let listenFD = Self.makeListeningSocket(path: path)
+        guard listenFD >= 0 else {
+            Log.error("Unix-Socket konnte nicht angelegt werden: \(path)")
+            exit(1)
+        }
+        Log.info("MCP server listening on unix socket \(path)")
+
+        // accept() blockiert, daher in einem eigenen Thread außerhalb des Main-Actors.
+        let (stream, continuation) = AsyncStream<Int32>.makeStream()
+        Thread.detachNewThread {
+            while true {
+                let client = accept(listenFD, nil, nil)
+                if client < 0 {
+                    if errno == EINTR { continue }
+                    break
+                }
+                continuation.yield(client)
+            }
+            continuation.finish()
+        }
+        for await client in stream {
+            Task { await self.serveClient(fd: client) }
+        }
+        Log.error("Socket-Listener beendet")
+        exit(1)
+    }
+
+    private func serveClient(fd: Int32) async {
+        Log.info("Client verbunden (fd \(fd))")
+        let server = Server(
+            name: "HomeKitMCP",
+            version: "1.0.0",
+            capabilities: .init(tools: .init(listChanged: false))
+        )
+        await registerToolHandlers(server: server)
+        let transport = StdioTransport(input: FileDescriptor(rawValue: fd), output: FileDescriptor(rawValue: fd))
+        do {
+            try await server.start(transport: transport)
+            await server.waitUntilCompleted()
+        } catch {
+            Log.error("Client-Sitzung beendet mit Fehler: \(error)")
+        }
+        close(fd)
+        Log.info("Client getrennt (fd \(fd))")
+    }
+
+    private nonisolated static func makeListeningSocket(path: String) -> Int32 {
+        let fd = socket(AF_UNIX, SOCK_STREAM, 0)
+        guard fd >= 0 else { return -1 }
+        unlink(path)
+        var addr = sockaddr_un()
+        addr.sun_family = sa_family_t(AF_UNIX)
+        let maxLen = MemoryLayout.size(ofValue: addr.sun_path)
+        guard path.utf8.count < maxLen else { close(fd); return -1 }
+        withUnsafeMutablePointer(to: &addr.sun_path) { ptr in
+            ptr.withMemoryRebound(to: CChar.self, capacity: maxLen) { dst in
+                _ = path.withCString { strncpy(dst, $0, maxLen - 1) }
+            }
+        }
+        let size = socklen_t(MemoryLayout<sockaddr_un>.size)
+        let bound = withUnsafePointer(to: &addr) {
+            $0.withMemoryRebound(to: sockaddr.self, capacity: 1) { bind(fd, $0, size) }
+        }
+        guard bound == 0 else { close(fd); return -1 }
+        chmod(path, 0o600)
+        guard listen(fd, 8) == 0 else { close(fd); return -1 }
+        return fd
     }
 
     private func registerToolHandlers(server: Server) async {

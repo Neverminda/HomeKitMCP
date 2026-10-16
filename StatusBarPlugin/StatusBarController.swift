@@ -62,6 +62,8 @@ class StatusBarController: NSObject, StatusBarBridgeProtocol {
             NSApp.setActivationPolicy(.accessory)
             let hide: () -> Void = {
                 for window in NSApp.windows where window.isVisible {
+                    window.alphaValue = 0
+                    window.ignoresMouseEvents = true
                     window.orderOut(nil)
                     window.setIsVisible(false)
                 }

@@ -17,25 +17,42 @@ struct HomeKitMCPApp: App {
     init() {
         #if targetEnvironment(macCatalyst)
         StatusBarLoader.load(headless: Self.isHeadless)
+        if Self.isHeadless {
+            // Jedes neue Fenster sofort auf 1x1 Pixel und ohne Titelleiste setzen
+            NotificationCenter.default.addObserver(forName: UIScene.willConnectNotification, object: nil, queue: .main) { note in
+                guard let scene = note.object as? UIWindowScene else { return }
+                scene.sizeRestrictions?.minimumSize = CGSize(width: 1, height: 1)
+                scene.sizeRestrictions?.maximumSize = CGSize(width: 1, height: 1)
+                scene.titlebar?.titleVisibility = .hidden
+                scene.titlebar?.toolbar = nil
+            }
+        }
         #endif
     }
 
     var body: some Scene {
         WindowGroup {
             #if targetEnvironment(macCatalyst)
-            VStack(spacing: 12) {
-                Image(systemName: "house.fill")
-                    .font(.largeTitle)
-                    .foregroundStyle(.tint)
-                Text("HomeKit MCP is running")
-                    .font(.headline)
-                Text("You can close this window. The server continues in the menu bar.")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
+            Group {
+                if Self.isHeadless {
+                    // Headless: winziges, durchsichtiges Fenster (wird sofort versteckt)
+                    Color.clear.frame(width: 1, height: 1)
+                } else {
+                VStack(spacing: 12) {
+                    Image(systemName: "house.fill")
+                        .font(.largeTitle)
+                        .foregroundStyle(.tint)
+                    Text("HomeKit MCP is running")
+                        .font(.headline)
+                    Text("You can close this window. The server continues in the menu bar.")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                }
+                .padding(40)
+                .frame(minWidth: 300, minHeight: 200)
+                }
             }
-            .padding(40)
-            .frame(minWidth: 300, minHeight: 200)
             .task {
                 // This runs after the view has been fully rendered
                 dismissWindow()

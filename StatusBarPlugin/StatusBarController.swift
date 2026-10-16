@@ -61,9 +61,13 @@ class StatusBarController: NSObject, StatusBarBridgeProtocol {
             guard let self else { return }
             NSApp.setActivationPolicy(.accessory)
             let hide: () -> Void = {
-                for window in NSApp.windows where window.isVisible {
+                // Ort des Fensters: oben mittig am Rand des Hauptbildschirms (1x1 Pixel)
+                let frame = NSScreen.main?.frame ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
+                let spot = NSRect(x: frame.midX - 0.5, y: frame.maxY - 1, width: 1, height: 1)
+                for window in NSApp.windows where window.isVisible || window.frame != spot {
                     window.alphaValue = 0
                     window.ignoresMouseEvents = true
+                    window.setFrame(spot, display: false)
                     window.orderOut(nil)
                     window.setIsVisible(false)
                 }

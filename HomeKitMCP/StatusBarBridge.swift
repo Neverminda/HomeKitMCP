@@ -5,4 +5,6 @@ import Foundation
 @objc(StatusBarBridgeProtocol) protocol StatusBarBridgeProtocol {
     func setupStatusBar()
     func hideAllWindows()
+    /// Headless-Betrieb: kein Menüleisten-Symbol, Fenster werden sofort und dauerhaft versteckt.
+    func startHeadlessMode()
 }

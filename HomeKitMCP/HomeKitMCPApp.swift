@@ -16,9 +16,7 @@ struct HomeKitMCPApp: App {
 
     init() {
         #if targetEnvironment(macCatalyst)
-        if !Self.isHeadless {
-            StatusBarLoader.load()
-        }
+        StatusBarLoader.load(headless: Self.isHeadless)
         #endif
     }
 

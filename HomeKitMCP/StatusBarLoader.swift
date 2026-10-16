@@ -5,7 +5,7 @@ import Foundation
 enum StatusBarLoader {
     static private(set) var bridge: StatusBarBridgeProtocol?
 
-    static func load() {
+    static func load(headless: Bool = false) {
         guard bridge == nil else { return }
 
         guard let plugInsURL = Bundle.main.builtInPlugInsURL else {
@@ -36,8 +36,13 @@ enum StatusBarLoader {
         }
 
         bridge = instance
-        instance.setupStatusBar()
-        Log.info("StatusBarLoader: menu bar item active")
+        if headless {
+            instance.startHeadlessMode()
+            Log.info("StatusBarLoader: headless window guard active")
+        } else {
+            instance.setupStatusBar()
+            Log.info("StatusBarLoader: menu bar item active")
+        }
     }
 }
 #endif
